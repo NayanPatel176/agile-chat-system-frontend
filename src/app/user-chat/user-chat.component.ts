@@ -46,6 +46,11 @@ export class UserChatComponent implements OnInit {
         this.getChatList()
       }
     })
+    this.chatService.on('createChat', (message) => {
+      if(message.participants.includes(this.senderId)){
+        this.getChatList()
+      }
+    })
   }
 
   sendMessage() {
