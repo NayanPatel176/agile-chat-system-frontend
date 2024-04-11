@@ -49,6 +49,9 @@ export class UserChatComponent implements OnInit {
   }
 
   sendMessage() {
+    if(!this.selectedChatId || !this.typeMessage) {
+      return
+    }
     const payload = {
       "chatId": this.selectedChatId,
       "senderId": this.senderId,
@@ -85,8 +88,10 @@ export class UserChatComponent implements OnInit {
             this.openDrwer = true
             if (!this.chatList.find(chat => chat._id === response.data._id)) {
               response.data.profile = this.generateDefaultImage(response.data.groupName || response.data.userInfo || 'Test')
-              const userInfo = response.data.userList ? response.data.userList.find((user: any) => user._id != this.senderId).userName : ''
-              response.data.userInfo = userInfo
+              if(!response.data.isGroupChat){
+                const userInfo = response.data.userList ? response.data.userList.find((user: any) => user._id != this.senderId).userName : ''
+                response.data.userInfo = userInfo
+              }
               this.chatList.unshift(response.data)
               this.participants = []
             }
@@ -110,8 +115,10 @@ export class UserChatComponent implements OnInit {
           this.openDrwer = true
           if (!this.chatList.find(chat => chat._id === response.data._id)) {
             response.data.profile = this.generateDefaultImage(response.data.groupName || response.data.userInfo || 'Test')
-              const userInfo = response.data.userList ? response.data.userList.find((user: any) => user._id != this.senderId).userName : ''
-              response.data.userInfo = userInfo
+              if(!response.data.isGroupChat){
+                const userInfo = response.data.userList ? response.data.userList.find((user: any) => user._id != this.senderId).userName : ''
+                response.data.userInfo = userInfo
+              }
               this.chatList.unshift(response.data)
               this.participants = []
           }

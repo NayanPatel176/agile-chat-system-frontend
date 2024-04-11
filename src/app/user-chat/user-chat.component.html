@@ -137,6 +137,7 @@
       <div class="chatbox-input">
         <input
           type="text"
+          [disabled]="!selectedChatId"
           [(ngModel)]="typeMessage"
           (keyup.enter)="sendMessage()"
           placeholder="Type a message"
