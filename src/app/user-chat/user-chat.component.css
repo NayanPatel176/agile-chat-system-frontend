@@ -402,6 +402,7 @@ img {
   height: 70px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0px 20px;
   color: #ffffff;
   cursor: pointer;

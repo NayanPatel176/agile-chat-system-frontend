@@ -21,7 +21,11 @@
         </div>
       </div>
 
-      <div class="chat-list">
+      <div
+        class="chat-list"
+        appScrollTracker
+        (scrolledToBottom)="loadMoreData(1)"
+      >
         <ng-container *ngFor="let chatLs of chatList">
           <div
             class="chat-box"
@@ -46,13 +50,14 @@
       </div>
       <div class="group-drawer" [ngClass]="{ showDrawer: !openDrwer }">
         <div class="header-group">
-          <div class="back-section" (click)="toggleDrawer(true, false)">
+          <div class="back-section">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="20"
               height="16"
               viewBox="0 0 14 10"
               fill="none"
+              (click)="toggleDrawer(true, false)"
             >
               <path
                 d="M12.3334 5H1.66675M1.66675 5L5.66675 9M1.66675 5L5.66675 1"
@@ -66,17 +71,19 @@
               isGroupChat ? "Add Group Members" : "Chat with user"
             }}</span>
             <br />
-            <button
+            <i
               *ngIf="isGroupChat"
-              [disabled]="participants.length < 1"
               (click)="createGroup()"
-            >
-              <i class="fa-solid fa-plus"></i>
-            </button>
+              class="fa-solid fa-plus"
+            ></i>
           </div>
         </div>
         <div class="add-group-wrapper">
-          <div class="chat-list">
+          <div
+            class="chat-list"
+            appScrollTracker
+            (scrolledToBottom)="loadMoreData(2)"
+          >
             <ng-container *ngFor="let user of userList">
               <div
                 class="chat-box"
@@ -117,7 +124,11 @@
         </div>
       </div>
 
-      <div class="chat-container">
+      <div
+        class="chat-container"
+        appScrollTracker
+        (scrolledToBottom)="loadMoreData(3)"
+      >
         <div
           class="message-box"
           *ngFor="let message of messages"
