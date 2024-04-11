@@ -65,18 +65,55 @@ export class UserChatComponent implements OnInit {
         }
       );
   }
-
+  participants: string[] = []
   addChat(user: any) {
+    if (this.isGroupChat) {
+      if(!this.participants.includes(user._id)){
+        this.participants.push(user._id)
+      } else {
+        const findIndex = this.participants.indexOf(user._id)
+        this.participants.splice(findIndex, 1)
+      }
+    } else {
+      const payload = {
+        isGroupChat: this.isGroupChat,
+        participants: [this.senderId, user._id]
+      }
+      this.chatService.createChat(payload)
+        .subscribe(
+          (response) => {
+            this.openDrwer = true
+            if (!this.chatList.find(chat => chat._id === response.data._id)) {
+              response.data.profile = this.generateDefaultImage(response.data.groupName || response.data.userInfo || 'Test')
+              const userInfo = response.data.userList ? response.data.userList.find((user: any) => user._id != this.senderId).userName : ''
+              response.data.userInfo = userInfo
+              this.chatList.unshift(response.data)
+              this.participants = []
+            }
+            this.getMessages(response.data)
+          },
+          (error) => {
+            console.error('API Error:', error)
+          }
+        );
+    }
+  }
+
+  createGroup() {
     const payload = {
       isGroupChat: this.isGroupChat,
-      participants: [this.senderId, user._id]
+      participants: [this.senderId, ...this.participants]
     }
     this.chatService.createChat(payload)
       .subscribe(
         (response) => {
           this.openDrwer = true
           if (!this.chatList.find(chat => chat._id === response.data._id)) {
-            this.chatList.unshift(response.data)
+            response.data.profile = this.generateDefaultImage(response.data.groupName || response.data.userInfo || 'Test')
+              const userInfo = response.data.userList ? response.data.userList.find((user: any) => user._id != this.senderId).userName : ''
+              response.data.userInfo = userInfo
+              this.chatList.unshift(response.data)
+              this.participants = []
           }
           this.getMessages(response.data)
         },
@@ -115,7 +152,7 @@ export class UserChatComponent implements OnInit {
         (response) => {
           this.chatList = response.chats
           this.chatList.map(chat => {
-            if(!chat.isGroupChat) {
+            if (!chat.isGroupChat) {
               const userInfo = chat.userList ? chat.userList.find(user => user._id != this.senderId).userName : ''
               chat.userInfo = userInfo
             }

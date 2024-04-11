@@ -15,7 +15,9 @@
           <li class="group-icon" (click)="toggleDrawer(false, true)">
             <i class="fa-solid fa-users"></i>
           </li>
-          <li (click)="toggleDrawer(false, false)"><i class="fa-solid fa-user"></i></li>
+          <li (click)="toggleDrawer(false, false)">
+            <i class="fa-solid fa-user"></i>
+          </li>
         </div>
       </div>
 
@@ -32,11 +34,11 @@
                 [src]="chatLs.profile"
                 onerror="this.src='https://lh5.googleusercontent.com/-7ssjf_mDE1Q/AAAAAAAAAAI/AAAAAAAAASo/tioYx2oklWEHoo5nAEyCT-KeLxYqE5PuQCLcDEAE/s100-c-k-no-mo/photo.jpg'"
                 alt=""
-                />
+              />
             </div>
             <div class="chat-details">
               <div class="text-head">
-                <h4>{{ chatLs.groupName || chatLs.userInfo || '' }}</h4>
+                <h4>{{ chatLs.groupName || chatLs.userInfo || "" }}</h4>
               </div>
             </div>
           </div>
@@ -60,13 +62,27 @@
                 stroke-linejoin="round"
               ></path>
             </svg>
-            <span class="back-title">{{isGroupChat ? 'Add Group Members' : 'Chat with user'}}</span>
+            <span class="back-title">{{
+              isGroupChat ? "Add Group Members" : "Chat with user"
+            }}</span>
+            <br />
+            <button
+              *ngIf="isGroupChat"
+              [disabled]="participants.length < 1"
+              (click)="createGroup()"
+            >
+              <i class="fa-solid fa-plus"></i>
+            </button>
           </div>
         </div>
         <div class="add-group-wrapper">
           <div class="chat-list">
             <ng-container *ngFor="let user of userList">
-              <div class="chat-box" (click)="addChat(user)">
+              <div
+                class="chat-box"
+                [ngClass]="{ active: participants.includes(user._id) }"
+                (click)="addChat(user)"
+              >
                 <div class="img-box">
                   <img
                     class="img-cover"
@@ -76,7 +92,7 @@
                 </div>
                 <div class="chat-details">
                   <div class="text-head">
-                    <h4>{{user.userName}}</h4>
+                    <h4>{{ user.userName }}</h4>
                   </div>
                 </div>
               </div>
