@@ -1,0 +1,132 @@
+<div class="chat-user">
+  <div class="background-green"></div>
+
+  <div class="main-container">
+    <div class="left-container">
+      <div class="header">
+        <div class="user-img">
+          <img
+            class="dp"
+            src="https://www.codewithfaraz.com/InstaPic.png"
+            alt=""
+          />
+        </div>
+        <div class="nav-icons">
+          <li class="group-icon" (click)="toggleDrawer(false, true)">
+            <i class="fa-solid fa-users"></i>
+          </li>
+          <li (click)="toggleDrawer(false, false)"><i class="fa-solid fa-user"></i></li>
+        </div>
+      </div>
+
+      <div class="chat-list">
+        <ng-container *ngFor="let chatLs of chatList">
+          <div
+            class="chat-box"
+            [ngClass]="{ active: chatLs._id == selectedChatId }"
+            (click)="getMessages(chatLs)"
+          >
+            <div class="img-box">
+              <img
+                class="img-cover"
+                [src]="chatLs.profile"
+                onerror="this.src='https://lh5.googleusercontent.com/-7ssjf_mDE1Q/AAAAAAAAAAI/AAAAAAAAASo/tioYx2oklWEHoo5nAEyCT-KeLxYqE5PuQCLcDEAE/s100-c-k-no-mo/photo.jpg'"
+                alt=""
+                />
+            </div>
+            <div class="chat-details">
+              <div class="text-head">
+                <h4>{{ chatLs.groupName || chatLs.userInfo || '' }}</h4>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+      <div class="group-drawer" [ngClass]="{ showDrawer: !openDrwer }">
+        <div class="header-group">
+          <div class="back-section" (click)="toggleDrawer(true, false)">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="16"
+              viewBox="0 0 14 10"
+              fill="none"
+            >
+              <path
+                d="M12.3334 5H1.66675M1.66675 5L5.66675 9M1.66675 5L5.66675 1"
+                stroke="#6A7994"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></path>
+            </svg>
+            <span class="back-title">{{isGroupChat ? 'Add Group Members' : 'Chat with user'}}</span>
+          </div>
+        </div>
+        <div class="add-group-wrapper">
+          <div class="chat-list">
+            <ng-container *ngFor="let user of userList">
+              <div class="chat-box" (click)="addChat(user)">
+                <div class="img-box">
+                  <img
+                    class="img-cover"
+                    src="https://images.pexels.com/photos/3564412/pexels-photo-3564412.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1"
+                    alt=""
+                  />
+                </div>
+                <div class="chat-details">
+                  <div class="text-head">
+                    <h4>{{user.userName}}</h4>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-container">
+      <div class="header">
+        <div class="img-text">
+          <div class="user-img">
+            <img
+              class="dp"
+              [src]="chatDp"
+              oneerror="this.src='https://images.pexels.com/photos/2474307/pexels-photo-2474307.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1'"
+              alt=""
+            />
+          </div>
+          <h4>{{ chatTitle }}</h4>
+        </div>
+      </div>
+
+      <div class="chat-container">
+        <div
+          class="message-box"
+          *ngFor="let message of messages"
+          [ngClass]="{
+            'my-message': message.senderId === senderId,
+            'friend-message': message.senderId !== senderId
+          }"
+        >
+          <p>
+            {{ message.message }}<br /><span>{{
+              message.createdAt | date : "hh:mm"
+            }}</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="chatbox-input">
+        <input
+          type="text"
+          [(ngModel)]="typeMessage"
+          (keyup.enter)="sendMessage()"
+          placeholder="Type a message"
+        />
+        <i class="fa-regular fa-paper-plane" (click)="sendMessage()"></i>
+      </div>
+    </div>
+  </div>
+</div>
