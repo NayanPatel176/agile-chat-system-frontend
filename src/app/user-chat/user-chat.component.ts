@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ChatService } from './chat.service';
 import { ChatListData, UserData, messageDetails } from './chat-user.model';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { NgToastService } from 'ng-angular-popup';
 
 @Component({
   selector: 'app-user-chat',
@@ -28,7 +28,8 @@ export class UserChatComponent implements OnInit {
 
   constructor(
     private chatService: ChatService,
-    private router: Router
+    private router: Router,
+    private toast: NgToastService
   ) {
     if (!this.senderId) {
       this.router.navigateByUrl('/user-login');
@@ -39,16 +40,29 @@ export class UserChatComponent implements OnInit {
 
   ngOnInit(): void {
     this.chatService.on('pushmessage', (message) => {
+      if (this.chatList.findIndex(chat => chat._id === message.chatId) >= 0) {
+        if (message.senderId !== this.senderId) {
+          this.toast.success({ detail: message.isGroupChat ? `${message.senderName} sent a message in ${message.groupName} group.` : `Your got new message from ${message.senderName}`, summary: `${message.message}`, duration: 5000 });
+        }
+      }
       if (this.selectedChatId === message.chatId) {
         this.messages.push(message)
-      }
-      if (!this.selectedChatId) {
-        this.getChatList()
       }
     })
     this.chatService.on('createChat', (message) => {
       if (message.participants.includes(this.senderId)) {
-        this.getChatList()
+        if (this.chatList.findIndex(chat => chat._id === message._id) < 0) {
+          message.userInfo = message.groupName ? message.groupName : message.userList.find((user: any) => user._id !== this.senderId).userName
+          message.profile = this.generateDefaultImage(message.userInfo || 'Test')
+          this.chatList.unshift(message)
+          if (message.senderId !== this.senderId) {
+            if (message.isGroupChat) {
+              this.toast.success({ detail: `${message.senderName} created group.`, summary: 'Go ahead and chat with other group members.', duration: 5000 });
+            } else {
+              this.toast.success({ detail: `${message.senderName} want to chat with you.`, summary: `Go ahead and chat with ${message.senderName}.`, duration: 5000 });
+            }
+          }
+        }
       }
     })
   }
@@ -92,15 +106,13 @@ export class UserChatComponent implements OnInit {
           (response) => {
             this.openDrwer = true
             if (!this.chatList.find(chat => chat._id === response.data._id)) {
-              response.data.profile = this.generateDefaultImage(response.data.groupName || response.data.userInfo || 'Test')
-              if (!response.data.isGroupChat) {
-                const userInfo = response.data.userList ? response.data.userList.find((user: any) => user._id != this.senderId).userName : ''
-                response.data.userInfo = userInfo
-              }
+              const userInfo = response.data.userList ? response.data.userList.find((user: any) => user._id != this.senderId).userName : ''
+              response.data.profile = this.generateDefaultImage(userInfo || 'Test')
+              response.data.userInfo = userInfo
               this.chatList.unshift(response.data)
               this.participants = []
+              this.getMessages(response.data)
             }
-            this.getMessages(response.data)
           },
           (error) => {
             console.error('API Error:', error)
@@ -110,7 +122,7 @@ export class UserChatComponent implements OnInit {
   }
 
   createGroup() {
-    if (this.participants.length <= 1) {
+    if (this.participants.length < 1) {
       return
     }
     const payload = {
@@ -129,8 +141,8 @@ export class UserChatComponent implements OnInit {
             }
             this.chatList.unshift(response.data)
             this.participants = []
+            this.getMessages(response.data)
           }
-          this.getMessages(response.data)
         },
         (error) => {
           console.error('API Error:', error)
@@ -138,7 +150,7 @@ export class UserChatComponent implements OnInit {
       );
   }
   userListSkip: number = 0
-  userListLimit: number = 10
+  userListLimit: number = 20
   getUserList(isScrol?: boolean) {
     if (isScrol) {
       if (this.userCount <= this.userListSkip + this.userListLimit) {
@@ -164,7 +176,7 @@ export class UserChatComponent implements OnInit {
   }
 
   chatListSkip: number = 0
-  chatListLimit: number = 10
+  chatListLimit: number = 20
   getChatList(isScrol?: boolean) {
     if (isScrol) {
       if (this.chatCount <= this.chatListSkip + this.chatListLimit) {
@@ -180,7 +192,11 @@ export class UserChatComponent implements OnInit {
     this.chatService.getChatList(query)
       .subscribe(
         (response) => {
-          this.chatList = [...this.chatList, ...response.chats]
+          if (isScrol) {
+            this.chatList = [...this.chatList, ...response.chats]
+          } else {
+            this.chatList = response.chats
+          }
           this.chatList.map(chat => {
             if (!chat.isGroupChat) {
               const userInfo = chat.userList ? chat.userList.find(user => user._id != this.senderId).userName : ''
@@ -189,13 +205,16 @@ export class UserChatComponent implements OnInit {
             chat.profile = this.generateDefaultImage(chat.groupName || chat.userInfo || 'Test')
           })
           this.chatCount = response.chatCount
+          if (!this.chatCount) {
+            this.toast.success({ detail: 'You Have No Chats Yet', summary: 'Start a new conversation!', duration: 5000 });
+          }
           if (this.chatCount && !this.selectedChatId) {
             this.selectedChatId = this.chatList[0]._id
             this.getMessages(this.chatList[0])
           }
         },
         (error) => {
-          console.error('API Error:', error)
+          this.toast.error({ detail: "ERROR", summary: error.error.message || 'Something went wrong!', sticky: true });
         }
       );
   }
@@ -229,7 +248,7 @@ export class UserChatComponent implements OnInit {
   }
 
   messagesSkip: number = 0
-  messagesLimit: number = 5
+  messagesLimit: number = 20
   chatSelectedData: ChatListData = { _id: '', participants: [], isGroupChat: false, createdAt: '' }
   getMessages(chatData: ChatListData, isScrol?: boolean) {
     this.chatSelectedData = chatData
@@ -288,7 +307,6 @@ export class UserChatComponent implements OnInit {
     if (listNumber === 3) {
       this.getMessages(this.chatSelectedData, true)
     }
-    console.log("API call triggered!");
   }
 
   ngOnDestroy() {

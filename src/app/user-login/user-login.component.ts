@@ -19,7 +19,6 @@ export class UserLoginComponent {
     this.loginService.loginUser({ userName: this.username })
       .subscribe(
         (response) => {
-          console.log('API Response:', response)
           this.router.navigateByUrl('/user-chat');
         },
         (error) => {
