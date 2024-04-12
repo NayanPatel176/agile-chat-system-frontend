@@ -39,7 +39,7 @@ export class UserChatComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.chatService.on('pushmessage', (message) => {
+    this.chatService.on('recieveMessage', (message) => {
       if (this.chatList.findIndex(chat => chat._id === message.chatId) >= 0) {
         if (message.senderId !== this.senderId) {
           this.toast.success({ detail: message.isGroupChat ? `${message.senderName} sent a message in ${message.groupName} group.` : `Your got new message from ${message.senderName}`, summary: `${message.message}`, duration: 5000 });
@@ -49,7 +49,8 @@ export class UserChatComponent implements OnInit {
         this.messages.push(message)
       }
     })
-    this.chatService.on('createChat', (message) => {
+    this.chatService.on('recievedChat', (message) => {
+      console.log('message: ', message);
       if (message.participants.includes(this.senderId)) {
         if (this.chatList.findIndex(chat => chat._id === message._id) < 0) {
           message.userInfo = message.groupName ? message.groupName : message.userList.find((user: any) => user._id !== this.senderId).userName
@@ -72,20 +73,24 @@ export class UserChatComponent implements OnInit {
       return
     }
     const payload = {
-      "chatId": this.selectedChatId,
-      "senderId": this.senderId,
-      "message": this.typeMessage
+      chatId: this.selectedChatId,
+      senderId: this.senderId,
+      message: this.typeMessage,
+      createdAt: new Date().toISOString()
     }
-    this.chatService.sendMessage(payload)
-      .subscribe(
-        (response) => {
-          // this.messages.push(response.data)
-          this.typeMessage = ''
-        },
-        (error) => {
-          console.error('API Error:', error)
-        }
-      );
+    this.chatService.emit('pushMessage', payload)
+    this.messages.push(payload)
+    this.typeMessage = ''
+    // this.chatService.sendMessage(payload)
+    //   .subscribe(
+    //     (response) => {
+    //       // this.messages.push(response.data)
+    //       this.typeMessage = ''
+    //     },
+    //     (error) => {
+    //       console.error('API Error:', error)
+    //     }
+    //   );
   }
   participants: string[] = []
   addChat(user: any) {
@@ -101,23 +106,26 @@ export class UserChatComponent implements OnInit {
         isGroupChat: this.isGroupChat,
         participants: [this.senderId, user._id]
       }
-      this.chatService.createChat(payload)
-        .subscribe(
-          (response) => {
-            this.openDrwer = true
-            if (!this.chatList.find(chat => chat._id === response.data._id)) {
-              const userInfo = response.data.userList ? response.data.userList.find((user: any) => user._id != this.senderId).userName : ''
-              response.data.profile = this.generateDefaultImage(userInfo || 'Test')
-              response.data.userInfo = userInfo
-              this.chatList.unshift(response.data)
-              this.participants = []
-              this.getMessages(response.data)
-            }
-          },
-          (error) => {
-            console.error('API Error:', error)
-          }
-        );
+      this.openDrwer = true
+      this.participants = []
+      this.chatService.emit('createChat', payload)
+      // this.chatService.createChat(payload)
+      //   .subscribe(
+      //     (response) => {
+      //       this.openDrwer = true
+      //       if (!this.chatList.find(chat => chat._id === response.data._id)) {
+      //         const userInfo = response.data.userList ? response.data.userList.find((user: any) => user._id != this.senderId).userName : ''
+      //         response.data.profile = this.generateDefaultImage(userInfo || 'Test')
+      //         response.data.userInfo = userInfo
+      //         this.chatList.unshift(response.data)
+      //         this.participants = []
+      //         this.getMessages(response.data)
+      //       }
+      //     },
+      //     (error) => {
+      //       console.error('API Error:', error)
+      //     }
+      //   );
     }
   }
 
@@ -129,25 +137,28 @@ export class UserChatComponent implements OnInit {
       isGroupChat: this.isGroupChat,
       participants: [this.senderId, ...this.participants]
     }
-    this.chatService.createChat(payload)
-      .subscribe(
-        (response) => {
-          this.openDrwer = true
-          if (!this.chatList.find(chat => chat._id === response.data._id)) {
-            response.data.profile = this.generateDefaultImage(response.data.groupName || response.data.userInfo || 'Test')
-            if (!response.data.isGroupChat) {
-              const userInfo = response.data.userList ? response.data.userList.find((user: any) => user._id != this.senderId).userName : ''
-              response.data.userInfo = userInfo
-            }
-            this.chatList.unshift(response.data)
-            this.participants = []
-            this.getMessages(response.data)
-          }
-        },
-        (error) => {
-          console.error('API Error:', error)
-        }
-      );
+    this.chatService.emit('createChat', payload)
+    this.openDrwer = true
+    this.participants = []
+    // this.chatService.createChat(payload)
+    //   .subscribe(
+    //     (response) => {
+    //       this.openDrwer = true
+    //       if (!this.chatList.find(chat => chat._id === response.data._id)) {
+    //         response.data.profile = this.generateDefaultImage(response.data.groupName || response.data.userInfo || 'Test')
+    //         if (!response.data.isGroupChat) {
+    //           const userInfo = response.data.userList ? response.data.userList.find((user: any) => user._id != this.senderId).userName : ''
+    //           response.data.userInfo = userInfo
+    //         }
+    //         this.chatList.unshift(response.data)
+    //         this.participants = []
+    //         this.getMessages(response.data)
+    //       }
+    //     },
+    //     (error) => {
+    //       console.error('API Error:', error)
+    //     }
+    //   );
   }
   userListSkip: number = 0
   userListLimit: number = 20

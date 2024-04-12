@@ -39,7 +39,7 @@ export interface ChatLiastResponse {
 }
 
 export interface messageDetails {
-    _id: string;
+    _id?: string;
     chatId: string;
     message: string;
     senderId: string;
