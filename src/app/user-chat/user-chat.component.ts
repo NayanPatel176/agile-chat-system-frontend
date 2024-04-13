@@ -3,6 +3,7 @@ import { ChatService } from './chat.service';
 import { ChatListData, UserData, messageDetails } from './chat-user.model';
 import { Router } from '@angular/router';
 import { NgToastService } from 'ng-angular-popup';
+import { SocketService } from './socket.service';
 
 @Component({
   selector: 'app-user-chat',
@@ -28,6 +29,7 @@ export class UserChatComponent implements OnInit {
 
   constructor(
     private chatService: ChatService,
+    private socketService: SocketService,
     private router: Router,
     private toast: NgToastService
   ) {
@@ -37,13 +39,12 @@ export class UserChatComponent implements OnInit {
     this.getUserDetails(this.senderId)
     this.getChatList()
     this.getUserList()
-    this.chatService.joinGroup(this.senderId).subscribe(() => {
-    })
+    this.socketService.joinGroup(this.senderId).subscribe(() => {})
   }
 
   ngOnInit(): void {
 
-    this.chatService.on('privateMessage', (message) => {
+    this.socketService.getEvent('message').subscribe((message) => {
       if (message.senderId !== this.senderId) {
         this.toast.success({ detail: message.isGroupChat ? `${message.senderName} sent a message in ${message.groupName} group.` : `Your got new message from ${message.senderName}`, summary: `${message.message}`, duration: 5000 });
       }
@@ -51,11 +52,9 @@ export class UserChatComponent implements OnInit {
         this.messages.push(message)
       }
     })
-
-    this.chatService.on('recievedChat', (message) => {
+    
+    this.socketService.getEvent('recievedChat').subscribe((message) => {
       if (message.participants.includes(this.senderId)) {
-        this.joinGroup(message._id)
-        this.subscribeMessages(message._id)
         if (this.chatList.findIndex(chat => chat._id === message._id) < 0) {
           message.userInfo = message.groupName ? message.groupName : message.userList.find((user: any) => user._id !== this.senderId).userName
           message.profile = this.generateDefaultImage(message.userInfo || 'Test')
@@ -91,40 +90,39 @@ export class UserChatComponent implements OnInit {
       );
   }
 
-  groupIdSubscrived: string[] = []
-  subscribeGroupMessages() {
-    this.chatList.map(chat => {
-      if (chat.isGroupChat) {
-        this.joinGroup(chat._id)
-        this.subscribeMessages(chat._id);
-      }
-    })
-  }
+  // subscribeGroupMessages() {
+  //   this.chatList.map(chat => {
+  //     if (chat.isGroupChat) {
+  //       this.joinGroup(chat._id)
+  //       this.subscribeMessages(chat._id);
+  //     }
+  //   })
+  // }
 
-  joinGroup(chatId: string) {
-    this.chatService.joinGroup(chatId).subscribe(() => { })
-  }
+  // joinGroup(chatId: string) {
+  //   this.socketService.joinGroup(chatId).subscribe(() => { })
+  // }
 
-  subscribeMessages(chatId: string) {
-    this.chatService.listenForGroupMessages(chatId).subscribe((message) => {
-      if (this.senderId !== message.senderId) {
-        if (this.chatList.findIndex(chat => chat._id === message.chatId) >= 0) {
-          if (message.senderId !== this.senderId) {
-            this.toast.success({ detail: message.isGroupChat ? `${message.senderName} sent a message in ${message.groupName} group.` : `Your got new message from ${message.senderName}`, summary: `${message.message}`, duration: 5000 });
-          }
-        }
-        if (this.selectedChatId === message.chatId) {
-          this.messages.push(message)
-        }
-      }
-    });
-  }
+  // subscribeMessages(chatId: string) {
+  //   this.socketService.listenForGroupMessages(chatId).subscribe((message) => {
+  //     if (this.senderId !== message.senderId) {
+  //       if (this.chatList.findIndex(chat => chat._id === message.chatId) >= 0) {
+  //         if (message.senderId !== this.senderId) {
+  //           this.toast.success({ detail: message.isGroupChat ? `${message.senderName} sent a message in ${message.groupName} group.` : `Your got new message from ${message.senderName}`, summary: `${message.message}`, duration: 5000 });
+  //         }
+  //       }
+  //       if (this.selectedChatId === message.chatId) {
+  //         this.messages.push(message)
+  //       }
+  //     }
+  //   });
+  // }
 
   sendMessage() {
     if (!this.selectedChatId || !this.typeMessage) {
       return
     }
-    const { isGroupChat, groupName } = this.chatSelectedData
+    const { isGroupChat, groupName, participants } = this.chatSelectedData
     const message = {
       chatId: this.selectedChatId,
       senderId: this.senderId,
@@ -134,12 +132,13 @@ export class UserChatComponent implements OnInit {
       isGroupChat,
       groupName
     }
-    if (this.chatSelectedData && this.chatSelectedData.isGroupChat) {
-      this.chatService.emit('groupMessage', { groupId: this.chatSelectedData._id, message });
-    } else {
-      this.chatService.emit('privateMessage', { recipientId: this.chatSelectedData.recipientId, message })
-    }
-    this.messages.push(message)
+    this.socketService.emit('message', { participants, message });
+    // if (this.chatSelectedData && this.chatSelectedData.isGroupChat) {
+    //   this.socketService.emit('groupMessage', { groupId: this.chatSelectedData._id, participants, message });
+    // } else {
+    //   this.socketService.emit('message', { recipientId: this.chatSelectedData.recipientId, message })
+    // }
+    // this.messages.push(message)
     this.typeMessage = ''
     // this.chatService.sendMessage(payload)
     //   .subscribe(
@@ -168,7 +167,7 @@ export class UserChatComponent implements OnInit {
       }
       this.openDrwer = true
       this.participants = []
-      this.chatService.emit('createChat', payload)
+      this.socketService.emit('createChat', payload)
       // this.chatService.createChat(payload)
       //   .subscribe(
       //     (response) => {
@@ -197,7 +196,7 @@ export class UserChatComponent implements OnInit {
       isGroupChat: this.isGroupChat,
       participants: [this.senderId, ...this.participants]
     }
-    this.chatService.emit('createChat', payload)
+    this.socketService.emit('createChat', payload)
     this.openDrwer = true
     this.participants = []
     // this.chatService.createChat(payload)
@@ -268,7 +267,7 @@ export class UserChatComponent implements OnInit {
           } else {
             this.chatList = response.chats
           }
-          this.subscribeGroupMessages()
+          // this.subscribeGroupMessages()
           this.chatList.map(chat => {
             if (!chat.isGroupChat) {
               const userInfo = chat.userList ? chat.userList.find(user => user._id != this.senderId).userName : ''
@@ -383,6 +382,6 @@ export class UserChatComponent implements OnInit {
   }
 
   ngOnDestroy() {
-    this.chatService.disconnect();
+    this.socketService.disconnect();
   }
 }
