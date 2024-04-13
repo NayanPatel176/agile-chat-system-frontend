@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { io } from "socket.io-client";
 import { ChatLiastResponse, UserResponse, messageData, messagesResponse, queryParams } from './chat-user.model';
-import { map } from 'rxjs';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -11,14 +11,39 @@ export class ChatService {
   url: string = 'http://localhost:3001'
   socket = io(this.url);
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) { 
+    this.socket.on('connect', () => {
+      console.log('Connected to Socket.IO server');
+    });
+  }
 
   emit(event: string, data?: any) {
     this.socket.emit(event, data);
   }
 
+
+  // Join a group
+  joinGroup(groupId: string): Observable<void> {
+    return new Observable((observer) => {
+      this.socket.emit('joinGroup', groupId, () => {
+        observer.next();
+        observer.complete();
+      });
+    });
+  }
+
+  // Listen for group messages
+  listenForGroupMessages(groupId: string): Observable<any> {
+    return new Observable((observer) => {
+      this.socket.on(`groupMessage:${groupId}`, (message) => {
+        console.log('groupId: ', groupId);
+        observer.next(message);
+      });
+    });
+  }
+
+
   on(event: string, callback: (...args: any[]) => void) {
-    console.log('event: ', event);
     this.socket.on(event, callback);
   }
 
@@ -40,6 +65,13 @@ export class ChatService {
       .set('skip', queryParams.skip)
       .set('limit', queryParams.limit)
     return this.http.get<UserResponse>(`${this.url}/user`, { params });
+  }
+
+  getUserDetails(userId: string) {
+    let params = new HttpParams();
+    params = params
+      .set('userId', userId)
+    return this.http.get<any>(`${this.url}/user/details`, { params });
   }
 
   getChatList(queryParams: queryParams) {

@@ -34,24 +34,28 @@ export class UserChatComponent implements OnInit {
     if (!this.senderId) {
       this.router.navigateByUrl('/user-login');
     }
+    this.getUserDetails(this.senderId)
     this.getChatList()
     this.getUserList()
+    this.chatService.joinGroup(this.senderId).subscribe(() => {
+    })
   }
 
   ngOnInit(): void {
-    this.chatService.on('recieveMessage', (message) => {
-      if (this.chatList.findIndex(chat => chat._id === message.chatId) >= 0) {
-        if (message.senderId !== this.senderId) {
-          this.toast.success({ detail: message.isGroupChat ? `${message.senderName} sent a message in ${message.groupName} group.` : `Your got new message from ${message.senderName}`, summary: `${message.message}`, duration: 5000 });
-        }
+
+    this.chatService.on('privateMessage', (message) => {
+      if (message.senderId !== this.senderId) {
+        this.toast.success({ detail: message.isGroupChat ? `${message.senderName} sent a message in ${message.groupName} group.` : `Your got new message from ${message.senderName}`, summary: `${message.message}`, duration: 5000 });
       }
       if (this.selectedChatId === message.chatId) {
         this.messages.push(message)
       }
     })
+
     this.chatService.on('recievedChat', (message) => {
-      console.log('message: ', message);
       if (message.participants.includes(this.senderId)) {
+        this.joinGroup(message._id)
+        this.subscribeMessages(message._id)
         if (this.chatList.findIndex(chat => chat._id === message._id) < 0) {
           message.userInfo = message.groupName ? message.groupName : message.userList.find((user: any) => user._id !== this.senderId).userName
           message.profile = this.generateDefaultImage(message.userInfo || 'Test')
@@ -68,18 +72,74 @@ export class UserChatComponent implements OnInit {
     })
   }
 
+  userDetails: UserData = { _id: '', userName: '', createdAt: '' }
+  getUserDetails(userId: string) {
+    this.chatService.getUserDetails(userId)
+      .subscribe(
+        (response) => {
+          this.userDetails = response.userDetails
+        },
+        (error) => {
+          console.error('API Error:', error)
+          this.toast.error({
+            detail: 'Chat App',
+            summary: 'You are not authorized to access this screen. Please go to the login page and log in again.',
+            duration: 5000
+          });
+          this.router.navigateByUrl('/user-login');
+        }
+      );
+  }
+
+  groupIdSubscrived: string[] = []
+  subscribeGroupMessages() {
+    this.chatList.map(chat => {
+      if (chat.isGroupChat) {
+        this.joinGroup(chat._id)
+        this.subscribeMessages(chat._id);
+      }
+    })
+  }
+
+  joinGroup(chatId: string) {
+    this.chatService.joinGroup(chatId).subscribe(() => { })
+  }
+
+  subscribeMessages(chatId: string) {
+    this.chatService.listenForGroupMessages(chatId).subscribe((message) => {
+      if (this.senderId !== message.senderId) {
+        if (this.chatList.findIndex(chat => chat._id === message.chatId) >= 0) {
+          if (message.senderId !== this.senderId) {
+            this.toast.success({ detail: message.isGroupChat ? `${message.senderName} sent a message in ${message.groupName} group.` : `Your got new message from ${message.senderName}`, summary: `${message.message}`, duration: 5000 });
+          }
+        }
+        if (this.selectedChatId === message.chatId) {
+          this.messages.push(message)
+        }
+      }
+    });
+  }
+
   sendMessage() {
     if (!this.selectedChatId || !this.typeMessage) {
       return
     }
-    const payload = {
+    const { isGroupChat, groupName } = this.chatSelectedData
+    const message = {
       chatId: this.selectedChatId,
       senderId: this.senderId,
       message: this.typeMessage,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      senderName: this.userDetails.userName,
+      isGroupChat,
+      groupName
     }
-    this.chatService.emit('pushMessage', payload)
-    this.messages.push(payload)
+    if (this.chatSelectedData && this.chatSelectedData.isGroupChat) {
+      this.chatService.emit('groupMessage', { groupId: this.chatSelectedData._id, message });
+    } else {
+      this.chatService.emit('privateMessage', { recipientId: this.chatSelectedData.recipientId, message })
+    }
+    this.messages.push(message)
     this.typeMessage = ''
     // this.chatService.sendMessage(payload)
     //   .subscribe(
@@ -208,6 +268,7 @@ export class UserChatComponent implements OnInit {
           } else {
             this.chatList = response.chats
           }
+          this.subscribeGroupMessages()
           this.chatList.map(chat => {
             if (!chat.isGroupChat) {
               const userInfo = chat.userList ? chat.userList.find(user => user._id != this.senderId).userName : ''
@@ -263,6 +324,7 @@ export class UserChatComponent implements OnInit {
   chatSelectedData: ChatListData = { _id: '', participants: [], isGroupChat: false, createdAt: '' }
   getMessages(chatData: ChatListData, isScrol?: boolean) {
     this.chatSelectedData = chatData
+    this.chatSelectedData.recipientId = !chatData.isGroupChat ? chatData.participants.find(participant => participant !== this.senderId) : ''
     if (isScrol) {
       if (this.messagesCount <= this.messagesSkip + this.messagesLimit) {
         return
@@ -280,7 +342,7 @@ export class UserChatComponent implements OnInit {
       skip: this.messagesSkip,
       limit: this.messagesLimit,
       chatId: this.selectedChatId,
-      userId: !chatData.isGroupChat ? chatData.participants.find(participant => participant !== this.senderId) : ''
+      userId: this.chatSelectedData.recipientId
     }
     this.chatService.getMessages(query)
       .subscribe(

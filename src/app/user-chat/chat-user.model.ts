@@ -30,7 +30,8 @@ export interface ChatListData {
     createdAt: string;
     profile?: string;
     userList?: any[];
-    userInfo? : string
+    userInfo? : string;
+    recipientId? : string;
 }
 
 export interface ChatLiastResponse {
