@@ -1,18 +1,29 @@
-import { Directive, Output, EventEmitter, HostListener, ElementRef } from '@angular/core';
+import { Directive, Output, EventEmitter, HostListener, ElementRef, Input } from '@angular/core';
 
 @Directive({
   selector: '[appScrollTracker]'
 })
 export class ScrollTrackerDirective {
-  @Output() scrolledToBottom = new EventEmitter<void>();
+  @Output() scrolled  = new EventEmitter<'top' | 'bottom'>();
+  @Input() scrollDirection: 'top' | 'bottom' = 'bottom';
 
   constructor(private el: ElementRef) { }
 
   @HostListener('scroll', [])
   onScroll(): void {
-    if (this.isAtBottom()) {
-      this.scrolledToBottom.emit();
+    if (this.scrollDirection === 'bottom' && this.isAtBottom()) {
+      this.scrolled.emit('bottom');
+    } else if (this.scrollDirection === 'top' && this.isAtTop()) {
+      this.scrolled.emit('top');
     }
+  }
+
+  private isAtTop(): boolean {
+    const nativeElement = this.el.nativeElement;
+    const scrollTop = nativeElement.scrollTop || window.pageYOffset || document.documentElement.scrollTop;
+    const threshold = 5; // Adjust this value as needed
+
+    return scrollTop <= threshold;
   }
 
   private isAtBottom(): boolean {

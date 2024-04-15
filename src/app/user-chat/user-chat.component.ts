@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { ChatService } from './chat.service';
 import { ChatListData, UserData, messageDetails } from './chat-user.model';
 import { Router } from '@angular/router';
@@ -11,6 +11,7 @@ import { SocketService } from './socket.service';
   styleUrls: ['./user-chat.component.css']
 })
 export class UserChatComponent implements OnInit {
+  @ViewChild('chatContainer') chatContainer!: ElementRef;
   senderId: string = localStorage.getItem('userId') || ''
   typeMessage: string = ''
 
@@ -39,7 +40,7 @@ export class UserChatComponent implements OnInit {
     this.getUserDetails(this.senderId)
     this.getChatList()
     this.getUserList()
-    this.socketService.joinGroup(this.senderId).subscribe(() => {})
+    this.socketService.joinGroup(this.senderId).subscribe(() => { })
   }
 
   ngOnInit(): void {
@@ -50,9 +51,12 @@ export class UserChatComponent implements OnInit {
       }
       if (this.selectedChatId === message.chatId) {
         this.messages.push(message)
+        setTimeout(() => {
+          this.scrollToBottom();
+        });
       }
     })
-    
+
     this.socketService.getEvent('recievedChat').subscribe((message) => {
       if (message.participants.includes(this.senderId)) {
         if (this.chatList.findIndex(chat => chat._id === message._id) < 0) {
@@ -69,6 +73,20 @@ export class UserChatComponent implements OnInit {
         }
       }
     })
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => {
+      this.scrollToBottom();
+    });
+  }
+
+  scrollToBottom(): void {
+    try {
+      this.chatContainer.nativeElement.scrollTop = this.chatContainer.nativeElement.scrollHeight;
+    } catch (err) {
+      console.error("Error scrolling to bottom:", err);
+    }
   }
 
   userDetails: UserData = { _id: '', userName: '', createdAt: '' }
@@ -346,10 +364,24 @@ export class UserChatComponent implements OnInit {
     this.chatService.getMessages(query)
       .subscribe(
         (response) => {
+          const newMessages = response.messages.reverse();
           if (isScrol) {
-            this.messages = [...this.messages, ...response.messages]
+            // Calculate the height of the newly added messages
+            const newMessagesHeight = this.calculateMessagesHeight(newMessages);
+
+            // Calculate the current scroll position relative to the bottom
+            const scrollHeight = this.chatContainer.nativeElement.scrollHeight;
+            const scrollTop = this.chatContainer.nativeElement.scrollTop;
+            const offsetHeight = this.chatContainer.nativeElement.offsetHeight;
+            const relativeScrollPosition = scrollHeight - (scrollTop + offsetHeight);
+            this.messages = [...newMessages, ...this.messages]
+
+            this.chatContainer.nativeElement.scrollTop = scrollHeight - (newMessagesHeight + relativeScrollPosition);
           } else {
-            this.messages = response.messages
+            this.messages = newMessages
+            setTimeout(() => {
+              this.scrollToBottom();
+            });
           }
           this.messagesCount = response.messagesCount
           if (!chatData.isGroupChat) {
@@ -360,6 +392,12 @@ export class UserChatComponent implements OnInit {
           console.error('API Error:', error)
         }
       );
+  }
+
+  private calculateMessagesHeight(messages: any[]): number {
+    return messages.reduce((totalHeight, message) => {
+      return totalHeight + 19; // Assuming a fixed height of 19px per message
+    }, 0);
   }
 
   isGroupChat: boolean = false
@@ -379,6 +417,11 @@ export class UserChatComponent implements OnInit {
     if (listNumber === 3) {
       this.getMessages(this.chatSelectedData, true)
     }
+  }
+
+  logout() {
+    localStorage.clear();
+    this.router.navigateByUrl('./user-login');
   }
 
   ngOnDestroy() {

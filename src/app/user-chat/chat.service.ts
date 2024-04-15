@@ -1,12 +1,13 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { ChatLiastResponse, UserResponse, messageData, messagesResponse, queryParams } from './chat-user.model';
+import { environment } from 'src/environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ChatService {
-  url: string = 'http://localhost:3001'
+  private url: string = environment.apiUrl
 
   constructor(private http: HttpClient) {}
 

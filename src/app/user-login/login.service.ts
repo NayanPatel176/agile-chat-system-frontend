@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { LoginUserData, LoginUserResponse } from './user-login.model';
 import { tap } from 'rxjs';
+import { environment } from 'src/environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -9,7 +10,7 @@ import { tap } from 'rxjs';
 export class LoginService {
 
   constructor(private http: HttpClient) { }
-  url: string = 'http://localhost:3001'
+  private url: string = environment.apiUrl
   loginUser(userData: LoginUserData) {
     return this.http.post<LoginUserResponse>(`${this.url}/user/login`, userData)
       .pipe(
