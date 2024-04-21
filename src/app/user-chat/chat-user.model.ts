@@ -29,9 +29,9 @@ export interface ChatListData {
     isGroupChat: boolean;
     createdAt: string;
     profile?: string;
-    userList?: any[];
-    userInfo? : string;
-    recipientId? : string;
+    userList?: { _id: string, userName: string }[];
+    userInfo?: string;
+    recipientId?: string;
 }
 
 export interface ChatLiastResponse {

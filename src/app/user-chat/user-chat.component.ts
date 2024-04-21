@@ -25,7 +25,7 @@ export class UserChatComponent implements OnInit {
 
   messages: messageDetails[] = []
   messagesCount: number = 0
-  chatTitle: string = ''
+  chatTitle: string | undefined = ''
   chatDp: string = ''
 
   constructor(
@@ -288,7 +288,7 @@ export class UserChatComponent implements OnInit {
           // this.subscribeGroupMessages()
           this.chatList.map(chat => {
             if (!chat.isGroupChat) {
-              const userInfo = chat.userList ? chat.userList.find(user => user._id != this.senderId).userName : ''
+              const userInfo = chat.userList ? chat.userList.find(user => user._id != this.senderId)?.userName : ''
               chat.userInfo = userInfo
             }
             chat.profile = this.generateDefaultImage(chat.groupName || chat.userInfo || 'Test')
@@ -353,6 +353,8 @@ export class UserChatComponent implements OnInit {
     this.selectedChatId = chatData._id
     if (chatData.isGroupChat) {
       this.chatTitle = chatData.groupName || ''
+    } else {
+      this.chatTitle = chatData.userList ? chatData.userList.find(user => user._id !== this.senderId)?.userName : ''
     }
     this.chatDp = chatData.profile || ''
     const query = {
@@ -384,7 +386,7 @@ export class UserChatComponent implements OnInit {
             });
           }
           this.messagesCount = response.messagesCount
-          if (!chatData.isGroupChat) {
+          if (!chatData.isGroupChat && response.opponentUserName) {
             this.chatTitle = response.opponentUserName
           }
         },

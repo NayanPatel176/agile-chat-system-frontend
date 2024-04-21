@@ -33,7 +33,7 @@ export class ChatService {
       .set('userId', queryParams.userId || '')
       .set('skip', queryParams.skip)
       .set('limit', queryParams.limit)
-    return this.http.get<ChatLiastResponse>(`${this.url}/chat`, { params });
+    return this.http.get<ChatLiastResponse>(`${this.url}/chatList`, { params });
   }
 
   getMessages(queryParams: queryParams) {
@@ -51,6 +51,6 @@ export class ChatService {
   }
 
   createChat(payload: any) {
-    return this.http.post<any>(`${this.url}/chat`, payload);
+    return this.http.post<any>(`${this.url}/chatList`, payload);
   }
 }
